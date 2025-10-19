@@ -1,67 +1,31 @@
 #!/usr/bin/python3
 """
-0-gather_data_from_an_API.py
-
-For a given employee ID, prints:
-Employee EMPLOYEE_NAME is done with tasks(DONE/TOTAL):
-\t TASK_TITLE
-...
+    python script that returns TODO list progress for a given employee ID
 """
-
+import json
 import requests
-import sys
-
-
-BASE_URL = "https://jsonplaceholder.typicode.com"
-
-
-def fetch_user(emp_id):
-    """Return user object or {} on failure."""
-    try:
-        r = requests.get(f"{BASE_URL}/users/{emp_id}", timeout=10)
-        r.raise_for_status()
-        return r.json() or {}
-    except Exception:
-        return {}
-
-
-def fetch_todos(emp_id):
-    """Return list of todos or [] on failure."""
-    try:
-        r = requests.get(
-            f"{BASE_URL}/todos", params={"userId": emp_id}, timeout=10
-        )
-        r.raise_for_status()
-        data = r.json()
-        return data if isinstance(data, list) else []
-    except Exception:
-        return []
-
-
-def print_todo_progress(emp_id):
-    """Print progress in the exact required format."""
-    user = fetch_user(emp_id)
-    todos = fetch_todos(emp_id)
-
-    name = user.get("name", "")
-    done_titles = [t.get("title", "") for t in todos if t.get("completed")]
-    total = len(todos)
-    done = len(done_titles)
-
-    print(f"Employee {name} is done with tasks({done}/{total}):")
-    for title in done_titles:
-        print(f"\t {title}")
-
-
-def main():
-    if len(sys.argv) != 2:
-        return
-    try:
-        emp_id = int(sys.argv[1])
-    except ValueError:
-        return
-    print_todo_progress(emp_id)
+from sys import argv
 
 
 if __name__ == "__main__":
-    main()
+    """ Functions for gathering  data from an API """
+    request_employee = requests.get(
+        'https://jsonplaceholder.typicode.com/users/{}/'.format(argv[1]))
+    employee = json.loads(request_employee.text)
+    employee_name = employee.get("name")
+    request_todos = requests.get(
+        'https://jsonplaceholder.typicode.com/users/{}/todos'.format(argv[1]))
+    tasks = {}
+    employee_todos = json.loads(request_todos.text)
+
+    for dictionary in employee_todos:
+        tasks.update({dictionary.get("title"): dictionary.get("completed")})
+
+    EMPLOYEE_NAME = employee_name
+    TOTAL_NUMBER_OF_TASKS = len(tasks)
+    NUMBER_OF_DONE_TASKS = len([k for k, v in tasks.items() if v is True])
+    print("Employee {} is done with tasks({}/{}):".format(
+        EMPLOYEE_NAME, NUMBER_OF_DONE_TASKS, TOTAL_NUMBER_OF_TASKS))
+    for k, v in tasks.items():
+        if v is True:
+            print("\t {}".format(k))
