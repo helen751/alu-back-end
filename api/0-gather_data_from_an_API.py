@@ -27,7 +27,8 @@ def fetch_json(url):
 
 def main():
     """
-    Entry point for CLI usage. Expects exactly one integer argument: employee ID.
+    Entry point for CLI usage.
+    Expects exactly one integer argument: employee ID.
     """
     if len(sys.argv) != 2:
         return
@@ -52,8 +53,11 @@ def main():
     total = len(todos)
     done = len(done_titles)
 
-    # Exact header format
-    print("Employee {} is done with tasks({}/{}):".format(name, done, total))
+    # Exact header format (wrapped to satisfy E501)
+    print(
+        "Employee {} is done with tasks({}/{}):"
+        .format(name, done, total)
+    )
 
     # Each completed task: tab + space + title
     for title in done_titles:
