@@ -21,7 +21,7 @@ def get_employee_todo_progress(employee_id):
         # 1. Fetch employee user information
         user_url = f"{base_url}/users/{employee_id}"
         user_response = requests.get(user_url)
-        user_response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+        user_response.raise_for_status()  # Handle HTTP errors
         user_data = user_response.json()
         
         # Check if the user exists
@@ -29,6 +29,7 @@ def get_employee_todo_progress(employee_id):
             print(f"Error: Employee with ID {employee_id} not found.")
             return
 
+        # Use the 'name' field as required by the project instructions
         employee_name = user_data.get("name")
 
         # 2. Fetch employee's TODO list
@@ -43,8 +44,10 @@ def get_employee_todo_progress(employee_id):
         number_of_done_tasks = len(done_tasks)
 
         # 3. Display the progress
-        # First line format: Employee EMPLOYEE_NAME is done with tasks(NUMBER_OF_DONE_TASKS/TOTAL_NUMBER_OF_TASKS):
-        print(f"Employee {employee_name} is done with tasks({number_of_done_tasks}/{total_tasks}):")
+        # First line format: Employee EMPLOYEE_NAME is done with tasks(DONE/TOTAL):
+        # Line broken to comply with E501
+        print(f"Employee {employee_name} is done with tasks("
+              f"{number_of_done_tasks}/{total_tasks}):")
 
         # Second and N next lines display the title of completed tasks
         for task in done_tasks:
