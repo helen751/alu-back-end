@@ -8,53 +8,43 @@ Employee EMPLOYEE_NAME is done with tasks(DONE/TOTAL):
 ...
 """
 
-import json
+import requests
 import sys
-from typing import Any, Dict, List, Optional
-from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
 
-# Try to use requests if available; fall back to urllib otherwise.
-try:
-    import requests  # type: ignore[import-not-found]
-except Exception:  # pragma: no cover
-    requests = None  # type: ignore[assignment]
 
 BASE_URL = "https://jsonplaceholder.typicode.com"
 
 
-def _get_json(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
-    """Fetch JSON from URL using requests if available, else urllib."""
-    if requests is not None:
-        resp = requests.get(url, params=params, timeout=15)
-        resp.raise_for_status()
-        return resp.json()
-
-    if params:
-        url = f"{url}?{urlencode(params)}"
-    req = Request(url, headers={"User-Agent": "python-urllib/3"})
-    with urlopen(req, timeout=15) as resp:
-        return json.load(resp)
-
-
-def print_todo_progress(employee_id: int) -> None:
-    """
-    Prints the TODO progress for the given employee_id in the exact format:
-    Employee EMPLOYEE_NAME is done with tasks(DONE/TOTAL):
-        TASK_TITLE
-    """
+def fetch_user(emp_id):
+    """Return user object or {} on failure."""
     try:
-        user = _get_json(f"{BASE_URL}/users/{employee_id}")
-        todos = _get_json(f"{BASE_URL}/todos", {"userId": employee_id})
-    except (HTTPError, URLError, json.JSONDecodeError, Exception):
-        # Silent failure to avoid breaking import-based checkers.
-        return
+        r = requests.get(f"{BASE_URL}/users/{emp_id}", timeout=10)
+        r.raise_for_status()
+        return r.json() or {}
+    except Exception:
+        return {}
+
+
+def fetch_todos(emp_id):
+    """Return list of todos or [] on failure."""
+    try:
+        r = requests.get(
+            f"{BASE_URL}/todos", params={"userId": emp_id}, timeout=10
+        )
+        r.raise_for_status()
+        data = r.json()
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def print_todo_progress(emp_id):
+    """Print progress in the exact required format."""
+    user = fetch_user(emp_id)
+    todos = fetch_todos(emp_id)
 
     name = user.get("name", "")
-    done_titles: List[str] = [
-        t.get("title", "") for t in todos if t.get("completed") is True
-    ]
+    done_titles = [t.get("title", "") for t in todos if t.get("completed")]
     total = len(todos)
     done = len(done_titles)
 
@@ -63,7 +53,7 @@ def print_todo_progress(employee_id: int) -> None:
         print(f"\t {title}")
 
 
-def main() -> None:
+def main():
     if len(sys.argv) != 2:
         return
     try:
