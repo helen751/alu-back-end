@@ -1,65 +1,67 @@
 #!/usr/bin/python3
 """
-A Python script that, for a given employee ID, returns information
-about his/her TODO list progress using a REST API.
+0-gather_data_from_an_API.py
+
+Fetches an employee's TODO progress from JSONPlaceholder and prints it in the
+required format:
+
+Employee EMPLOYEE_NAME is done with tasks(DONE/TOTAL):
+\t TASK_TITLE
+\t TASK_TITLE
+...
 """
 
 import requests
 import sys
 
-if __name__ == "__main__":
-    # Ensure an employee ID is provided as an argument
+
+def main():
     if len(sys.argv) != 2:
-        print("Usage: {} <employee_id>".format(sys.argv[0]))
+        # Expect exactly one integer argument (employee ID)
         sys.exit(1)
 
-    # Ensure the provided ID is an integer
     try:
-        employee_id = int(sys.argv[1])
+        emp_id = int(sys.argv[1])
     except ValueError:
-        print("Employee ID must be an integer.")
         sys.exit(1)
 
-    # Base URL for the API
     base_url = "https://jsonplaceholder.typicode.com"
 
-    # Fetch user information to get the employee's name
-    user_url = "{}/users/{}".format(base_url, employee_id)
+    # Get employee (user) info
+    user_url = f"{base_url}/users/{emp_id}"
     try:
-        user_response = requests.get(user_url)
-        user_response.raise_for_status()  # Raise an HTTPError for bad responses
-        user_data = user_response.json()
-        employee_name = user_data.get("name")
-    except requests.exceptions.RequestException as e:
-        print("Error fetching user data: {}".format(e))
-        sys.exit(1)
-    except ValueError:
-        print("Error: Could not decode JSON from user data response.")
+        user_resp = requests.get(user_url, timeout=10)
+        user_resp.raise_for_status()
+    except requests.RequestException:
         sys.exit(1)
 
-    # Fetch the TODO list for the specified employee using query parameters
-    todos_url = "{}/todos".format(base_url)
-    params = {"userId": employee_id}
+    user = user_resp.json()
+    emp_name = user.get("name", "")
+
+    # Get todos for this user
+    todos_url = f"{base_url}/todos"
     try:
-        todos_response = requests.get(todos_url, params=params)
-        todos_response.raise_for_status()
-        todos_data = todos_response.json()
-    except requests.exceptions.RequestException as e:
-        print("Error fetching TODO data: {}".format(e))
-        sys.exit(1)
-    except ValueError:
-        print("Error: Could not decode JSON from TODO list response.")
+        todos_resp = requests.get(
+            todos_url, params={"userId": emp_id}, timeout=10
+        )
+        todos_resp.raise_for_status()
+    except requests.RequestException:
         sys.exit(1)
 
-    # Process the tasks to find completed ones
-    completed_tasks = [task for task in todos_data if task.get("completed")]
-    number_of_done_tasks = len(completed_tasks)
-    total_number_of_tasks = len(todos_data)
+    todos = todos_resp.json()
+    done_titles = [t.get("title", "")
+                   for t in todos if t.get("completed") is True]
 
-    # Display the result in the specified format
-    if employee_name and todos_data is not None:
-        print("Employee {} is done with tasks({}/{}):".format(
-            employee_name, number_of_done_tasks, total_number_of_tasks))
+    total = len(todos)
+    done = len(done_titles)
 
-        for task in completed_tasks:
-            print("\t {}".format(task.get("title")))
+    # First line EXACT format
+    print(f"Employee {emp_name} is done with tasks({done}/{total}):")
+
+    # Completed task titles, each with a leading tab then a space
+    for title in done_titles:
+        print(f"\t {title}")
+
+
+if __name__ == "__main__":
+    main()
