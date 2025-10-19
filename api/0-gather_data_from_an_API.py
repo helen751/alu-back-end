@@ -37,10 +37,11 @@ if __name__ == "__main__":
         print("Error: Could not decode JSON from user data response.")
         sys.exit(1)
 
-    # Fetch the TODO list for the specified employee
-    todos_url = "{}/users/{}/todos".format(base_url, employee_id)
+    # Fetch the TODO list for the specified employee using query parameters
+    todos_url = "{}/todos".format(base_url)
+    params = {"userId": employee_id}
     try:
-        todos_response = requests.get(todos_url)
+        todos_response = requests.get(todos_url, params=params)
         todos_response.raise_for_status()
         todos_data = todos_response.json()
     except requests.exceptions.RequestException as e:
@@ -56,8 +57,9 @@ if __name__ == "__main__":
     total_number_of_tasks = len(todos_data)
 
     # Display the result in the specified format
-    print("Employee {} is done with tasks({}/{}):".format(
-        employee_name, number_of_done_tasks, total_number_of_tasks))
+    if employee_name and todos_data is not None:
+        print("Employee {} is done with tasks({}/{}):".format(
+            employee_name, number_of_done_tasks, total_number_of_tasks))
 
-    for task in completed_tasks:
-        print("\t {}".format(task.get("title")))
+        for task in completed_tasks:
+            print("\t {}".format(task.get("title")))
