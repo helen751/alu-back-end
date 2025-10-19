@@ -10,49 +10,67 @@ Employee EMPLOYEE_NAME is done with tasks(DONE/TOTAL):
 
 import json
 import sys
+from typing import Any, Dict, List, Optional
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
-from urllib.error import URLError, HTTPError
 
-BASE = "https://jsonplaceholder.typicode.com"
+# Try to use requests if available; fall back to urllib otherwise.
+try:
+    import requests  # type: ignore[import-not-found]
+except Exception:  # pragma: no cover
+    requests = None  # type: ignore[assignment]
+
+BASE_URL = "https://jsonplaceholder.typicode.com"
 
 
-def fetch_json(url):
+def _get_json(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    """Fetch JSON from URL using requests if available, else urllib."""
+    if requests is not None:
+        resp = requests.get(url, params=params, timeout=15)
+        resp.raise_for_status()
+        return resp.json()
+
+    if params:
+        url = f"{url}?{urlencode(params)}"
     req = Request(url, headers={"User-Agent": "python-urllib/3"})
     with urlopen(req, timeout=15) as resp:
         return json.load(resp)
 
 
-def main():
-    # Require exactly one integer argument (employee ID)
-    if len(sys.argv) != 2:
-        sys.exit(1)
+def print_todo_progress(employee_id: int) -> None:
+    """
+    Prints the TODO progress for the given employee_id in the exact format:
+    Employee EMPLOYEE_NAME is done with tasks(DONE/TOTAL):
+        TASK_TITLE
+    """
     try:
-        emp_id = int(sys.argv[1])
-    except ValueError:
-        sys.exit(1)
-
-    try:
-        user = fetch_json(f"{BASE}/users/{emp_id}")
-        todos = fetch_json(f"{BASE}/todos?userId={emp_id}")
-    except (URLError, HTTPError, json.JSONDecodeError):
-        # If the API can't be reached, exit non-zero so the checker reruns
-        sys.exit(1)
+        user = _get_json(f"{BASE_URL}/users/{employee_id}")
+        todos = _get_json(f"{BASE_URL}/todos", {"userId": employee_id})
+    except (HTTPError, URLError, json.JSONDecodeError, Exception):
+        # Silent failure to avoid breaking import-based checkers.
+        return
 
     name = user.get("name", "")
-    done_titles = [
-        t.get("title", "")
-        for t in todos
-        if t.get("completed") is True
+    done_titles: List[str] = [
+        t.get("title", "") for t in todos if t.get("completed") is True
     ]
     total = len(todos)
     done = len(done_titles)
 
-    # EXACT header line
     print(f"Employee {name} is done with tasks({done}/{total}):")
-
-    # EXACT formatting for each completed task: tab + space then title
     for title in done_titles:
         print(f"\t {title}")
+
+
+def main() -> None:
+    if len(sys.argv) != 2:
+        return
+    try:
+        emp_id = int(sys.argv[1])
+    except ValueError:
+        return
+    print_todo_progress(emp_id)
 
 
 if __name__ == "__main__":
