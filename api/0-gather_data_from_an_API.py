@@ -12,8 +12,8 @@ Output format:
 (Only completed tasks are listed. The prefix is one tab then one space.)
 """
 
-import sys
 import requests
+import sys
 
 
 API = "https://jsonplaceholder.typicode.com"
@@ -47,12 +47,10 @@ def main() -> None:
     done_tasks = [t for t in todos if bool(t.get("completed"))]
     done_count = len(done_tasks)
 
-    # Exact first-line formatting (no extra spaces)
     print(
         f"Employee {employee_name} is done with tasks({done_count}/{total}):"
     )
 
-    # Each completed task on its own line, exactly: tab + space + title
     for t in done_tasks:
         title = t.get("title", "")
         print(f"\t {title}")
